@@ -1,9 +1,95 @@
+<!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <title>Chain</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.firebase.com/js/client/2.2.1/firebase.js"></script>
+    <script type="text/javascript" src="paper-full.js"></script>
+    <script type="text/paperscript" canvas="canvas">
+        // Adapted from the following Processing example:
+        // http://processing.org/learning/topics/follow3.html
+        var ref  = new Firebase("https://dankchains.firebaseio.com/")
+        // The amount of points in the path:
+        var points = 30;
+        var count = 0;
 
+        ref.child("player").set({
+            coordinates: {
+              x: 0,
+              y: 0,
+            }
+        });
+        // The distance between the points:
+        var length = 15;
+
+        var path = new Path({
+            strokeColor: '#E4141B',
+            strokeWidth: 20,
+            strokeCap: 'round'
+        });
+
+        var start = view.center / [10, 1];
+        for (var i = 0; i < points; i++)
+            path.add(start + new Point(i * length, 0));
+
+        function onMouseMove(event) {
+            count++;
+            path.firstSegment.point = event.point;
+            for (var i = 0; i < points - 1; i++) {
+                var segment = path.segments[i];
+                var nextSegment = segment.next;
+                var vector = segment.point - nextSegment.point;
+                vector.length = length;
+                nextSegment.point = segment.point - vector;
+            }
+            path.smooth();
+            if(count % 5 == 0){
+              sendPos();
+            }
+        }
+
+        function sendPos(){
+          var posx = [];
+          var posy = [];
+          for(var i = 0; i < points - 1; i++){
+            var x = path.segments[i]._point._x;
+            posx.push(x);
+            var y = path.segments[i]._point._y;
+            posy.push(y);
+          }
+          ref.child("player").set({
+              coordinates: {
+                  x: posx,
+                  y: posy,
+              }
+          });
+        }
+
+        document.onkeydown = function(evt) {
+            evt = evt || window.event;
+            if (evt.keyCode == 27) {
+                for(var i = 0; i < 30; i++){
+                  path.add(new Point(0, 0));
+                  points++;
+                }
+            }
+        };
+
+        function onMouseDown(event) {
+            path.add(new Point(0, 0));
+            points++;
+            path.fullySelected = true;
+            path.strokeColor = '#e08285';
+        }
+
+        function onMouseUp(event) {
+            path.fullySelected = false;
+            path.strokeColor = '#e4141b';
+        }
+    </script>
 </head>
-
 <body>
+    <canvas id="canvas" resize></canvas>
 </body>
-
 </html>
